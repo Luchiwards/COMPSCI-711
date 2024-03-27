@@ -37,14 +37,6 @@ public class Form1 : Form
     private int[] middleware_ports = {8088, 8089, 8090, 8091 };
     private List<MMessages> messages_list = new List<MMessages>();
     private List<MMessage> ready_messages = new List<MMessage>();
-        //{
-        //    new MMessages(1, "Middleware1"),
-        //    new MMessages(2, "Middleware2"),
-        //    new MMessages(3, "Middleware3"),
-        //    new MMessages(4, "Middleware4"),
-        //    new MMessages(5, "Middleware5")
-        //};
-
 
 
     public Form1()
@@ -165,9 +157,9 @@ public class Form1 : Form
         await client.GetStream().ReadAsync(buffer, 0, buffer.Length);
         string[] message = Encoding.UTF8.GetString(buffer).Trim('\0').Split(',');
         string msg = message[0];
-        long time = long.Parse(message[1]);
+        long clock = long.Parse(message[1]);
         bool confirm = bool.Parse(message[2]);
-        
+        InsertMsgToList(msg, clock, confirm);
 
     }
 
@@ -208,6 +200,7 @@ public class Form1 : Form
 
         }
 
+        SendMsgMiddlewares(message, false);
 
     }
 
@@ -259,6 +252,11 @@ public class Form1 : Form
                 newMMessages.messages.Add(newMsg);
                 messages_list.Add(newMMessages);
 
+            }
+
+            if (messages_list[messagesIndex].messages.Count == 5)
+            {
+                SendMsgMiddlewares(message, true);
             }
         }
 
