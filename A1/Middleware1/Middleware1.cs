@@ -4,6 +4,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
 
 public class Program
 {
@@ -22,15 +26,31 @@ public class Form1 : Form
     private RichTextBox richTextBox_received;
     private RichTextBox richTextBox_ready;
     private TcpListener listener;
+    private TcpListener mlistener;
     private Label label_sent;
     private Label label_received;
     private Label label_ready;
+    private int port = 8082;
+    private int count = 1;
+    private string title = "Middleware 1";
+    private int middleware_port = 8087;
+    private int[] middleware_ports = {8088, 8089, 8090, 8091 };
+    private List<MMessages> messages_list = new List<MMessages>();
+    private List<MMessage> ready_messages = new List<MMessage>();
+        //{
+        //    new MMessages(1, "Middleware1"),
+        //    new MMessages(2, "Middleware2"),
+        //    new MMessages(3, "Middleware3"),
+        //    new MMessages(4, "Middleware4"),
+        //    new MMessages(5, "Middleware5")
+        //};
+
 
 
     public Form1()
     {
-        this.Text = "Middleware 1";
-        this.Size = new System.Drawing.Size(800, 600);
+        this.Text = title;
+        this.Size = new System.Drawing.Size(730, 400);
         button1 = new Button();
         button1.Size = new System.Drawing.Size(100, 50);
         button1.Location = new System.Drawing.Point(35, 15);
@@ -78,9 +98,12 @@ public class Form1 : Form
         Controls.Add(label_ready);
         Controls.Add(richTextBox_ready);
 
-        listener = new TcpListener(IPAddress.Any, 8082);
+        listener = new TcpListener(IPAddress.Any, port);
         listener.Start();
+        mlistener = new TcpListener(IPAddress.Any, middleware_port);
+        mlistener.Start();
         ListenForClientsAsync();
+        mListenForClientsAsync();
     }
 
     private async void ListenForClientsAsync()
@@ -92,23 +115,181 @@ public class Form1 : Form
         }
     }
 
+    private async void mListenForClientsAsync()
+    {
+        while (true)
+        {
+            TcpClient client = await mlistener.AcceptTcpClientAsync();
+            ReadMsgMiddlewares(client);
+        }
+    }
+
     private async void ReadMessageAsync(TcpClient client)
     {
         byte[] buffer = new byte[1024];
         await client.GetStream().ReadAsync(buffer, 0, buffer.Length);
         string message = Encoding.UTF8.GetString(buffer).Trim('\0');
         richTextBox_received.AppendText($"{message}\n");
+        InsertMsgToList(message);
 
     }
 
     private async void button1_Click(object sender, EventArgs e)
     {
         TcpClient client = new TcpClient("localhost", 8081);
-        byte[] data = Encoding.UTF8.GetBytes("Sent message from 8082");
+        string message = $"Msg #{count} from {title} {port}\n";
+        byte[] data = Encoding.UTF8.GetBytes(message);
         await client.GetStream().WriteAsync(data, 0, data.Length);
-        richTextBox_sent.AppendText($"{message}\n");
+        richTextBox_sent.AppendText(message);
+        count += 1;
+
+    }
+    private async void SendMsgMiddlewares(string message, bool confirm)
+    {
+        int[] sortedPorts = new int[4];
+        long unixTimestampMillis = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds();
+        Array.Copy(middleware_ports, sortedPorts, 4);
+
+        Array.Sort(sortedPorts);
+        for (int i = 0; i < 4; i++)
+        {
+
+            TcpClient client = new TcpClient("localhost", sortedPorts[i]);
+            byte[] data = Encoding.UTF8.GetBytes($"{message},{unixTimestampMillis},{confirm}");
+            await client.GetStream().WriteAsync(data, 0, data.Length);
+        }
+    }
+    private async void ReadMsgMiddlewares(TcpClient client)
+    {
+        byte[] buffer = new byte[1024];
+        await client.GetStream().ReadAsync(buffer, 0, buffer.Length);
+        string[] message = Encoding.UTF8.GetString(buffer).Trim('\0').Split(',');
+        string msg = message[0];
+        long time = long.Parse(message[1]);
+        bool confirm = bool.Parse(message[2]);
+        
+
+    }
+
+    private void InsertMsgToList(string message)
+    {
+        long unixTimestampMillis = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds();
+
+        int msgId = Regex.Matches(message, "#(\\d+)")
+                            .Cast<Match>()
+                            .Select(m => int.Parse(m.Groups[1].Value))
+                            .FirstOrDefault();
+
+        int middlewareId = Regex.Matches(message, "Middleware (\\d)")
+                                         .Cast<Match>()
+                                         .Select(m => int.Parse(m.Groups[1].Value))
+                                         .FirstOrDefault();
+
+        int fromPort = Regex.Matches(message, "(\\d{4})$")
+                                   .Cast<Match>()
+                                   .Select(m => int.Parse(m.Groups[1].Value))
+                                   .FirstOrDefault();
+
+        MMessage newMsg = new MMessage(message, unixTimestampMillis);
+
+
+        int messagesIndex = messages_list.FindIndex(m => m.id == msgId && m.middlewareId == middlewareId);
+
+
+        if (messagesIndex != -1)
+        {
+            messages_list[messagesIndex].messages.Add(newMsg);
+        }
+        else
+        {
+            MMessages newMMessages = new MMessages(msgId, middlewareId);
+            newMMessages.messages.Add(newMsg);
+            messages_list.Add(newMMessages);
+
+        }
+
+
+    }
+
+
+
+    private void InsertMsgToList(string message, long unixTimestampMillis, bool confirm)
+    {
+        if(confirm)
+        {
+            ready_messages.Add(new MMessage(message,unixTimestampMillis));
+
+            ready_messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
+
+            string messagesString = String.Join("\n", ready_messages.Select(m => m.message));
+
+            richTextBox_ready.Text = messagesString;
+
+        }
+        else 
+        {
+            int msgId = Regex.Matches(message, "#(\\d+)")
+                                .Cast<Match>()
+                                .Select(m => int.Parse(m.Groups[1].Value))
+                                .FirstOrDefault();
+
+            int middlewareId = Regex.Matches(message, "Middleware (\\d)")
+                                             .Cast<Match>()
+                                             .Select(m => int.Parse(m.Groups[1].Value))
+                                             .FirstOrDefault();
+
+            int fromPort = Regex.Matches(message, "(\\d{4})$")
+                                       .Cast<Match>()
+                                       .Select(m => int.Parse(m.Groups[1].Value))
+                                       .FirstOrDefault();
+
+            MMessage newMsg = new MMessage(message, unixTimestampMillis);
+
+
+            int messagesIndex = messages_list.FindIndex(m => m.id == msgId && m.middlewareId == middlewareId);
+
+
+            if (messagesIndex != -1)
+            {
+                messages_list[messagesIndex].messages.Add(newMsg);
+            }
+            else
+            {
+                MMessages newMMessages = new MMessages(msgId, middlewareId);
+                newMMessages.messages.Add(newMsg);
+                messages_list.Add(newMMessages);
+
+            }
+        }
 
     }
 }
 
+public class MMessages
+{
+    public int id { get; set; }
+    public int middlewareId { get; set; }
+    public int count { get; set; }
+    public List<MMessage> messages { get; set; }
 
+    public MMessages(int id, int middlewareId)
+    {
+        this.id = id;
+        this.middlewareId = middlewareId;
+        this.count = 0;
+        this.messages = new List<MMessage>();
+    }
+}
+
+
+public class MMessage
+{
+    public string message { get; set; }
+    public long clock { get; set; }
+
+    public MMessage(string message, long clock)
+    {
+        this.message = message;
+        this.clock = clock;
+    }
+}
