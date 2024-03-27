@@ -33,6 +33,7 @@ public class Form1 : Form
     private int port = 8082;
     private int count = 1;
     private string title = "Middleware 1";
+    private int middleware_id = 1;
     private int middleware_port = 8087;
     private int[] middleware_ports = {8088, 8089, 8090, 8091 };
     private List<MMessages> messages_list = new List<MMessages>();
@@ -224,14 +225,7 @@ public class Form1 : Form
     {
         if(confirm)
         {
-            ready_messages.Add(new MMessage(message,unixTimestampMillis));
-
-            ready_messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
-
-            string messagesString = String.Join("\n", ready_messages.Select(m => m.message));
-
-            richTextBox_ready.Text = messagesString;
-
+            InsertReadyMsg(message, unixTimestampMillis);
         }
         else 
         {
@@ -270,16 +264,27 @@ public class Form1 : Form
 
             messagesIndex = messages_list.FindIndex(m => m.id == msgId && m.middlewareId == middlewareId); // Re-find or update index as needed
 
-            if (messagesIndex != -1 && messages_list[messagesIndex].messages.Count == 5)
+            if (messagesIndex != -1 && messages_list[messagesIndex].messages.Count == 5 && middleware_id == middlewareId)
             {
                 messages_list[messagesIndex].messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
 
                 MMessage largestClockMsg = messages_list[messagesIndex].messages.LastOrDefault();
 
+                InsertReadyMsg(largestClockMsg.message, largestClockMsg.clock);
                 SendMsgMiddlewares(largestClockMsg.message, largestClockMsg.clock, true);
             }
         }
 
+    }
+    private void InsertReadyMsg(string message, long unixTimestampMillis)
+    {
+        ready_messages.Add(new MMessage(message, unixTimestampMillis));
+
+        ready_messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
+
+        string messagesString = String.Join("\n", ready_messages.Select(m => m.message));
+
+        richTextBox_ready.Text = messagesString;
     }
 }
 

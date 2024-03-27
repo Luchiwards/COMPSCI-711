@@ -33,6 +33,7 @@ public class Form1 : Form
     private int port = 8084;
     private int count = 1;
     private string title = "Middleware 3";
+    private int middleware_id = 3;
     private int middleware_port = 8089;
     private int[] middleware_ports = { 8087, 8088, 8090, 8091 };
     private List<MMessages> messages_list = new List<MMessages>();
@@ -151,6 +152,20 @@ public class Form1 : Form
             await client.GetStream().WriteAsync(data, 0, data.Length);
         }
     }
+    private async void SendMsgMiddlewares(string message, long unixTimestampMillis, bool confirm)
+    {
+        int[] sortedPorts = new int[4];
+        Array.Copy(middleware_ports, sortedPorts, 4);
+
+        Array.Sort(sortedPorts);
+        for (int i = 0; i < 4; i++)
+        {
+
+            TcpClient client = new TcpClient("localhost", sortedPorts[i]);
+            byte[] data = Encoding.UTF8.GetBytes($"{message},{unixTimestampMillis},{confirm}");
+            await client.GetStream().WriteAsync(data, 0, data.Length);
+        }
+    }
     private async void ReadMsgMiddlewares(TcpClient client)
     {
         byte[] buffer = new byte[1024];
@@ -210,14 +225,7 @@ public class Form1 : Form
     {
         if (confirm)
         {
-            ready_messages.Add(new MMessage(message, unixTimestampMillis));
-
-            ready_messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
-
-            string messagesString = String.Join("\n", ready_messages.Select(m => m.message));
-
-            richTextBox_ready.Text = messagesString;
-
+            InsertReadyMsg(message, unixTimestampMillis);
         }
         else
         {
@@ -256,12 +264,27 @@ public class Form1 : Form
 
             messagesIndex = messages_list.FindIndex(m => m.id == msgId && m.middlewareId == middlewareId); // Re-find or update index as needed
 
-            if (messagesIndex != -1 && messages_list[messagesIndex].messages.Count == 5)
+            if (messagesIndex != -1 && messages_list[messagesIndex].messages.Count == 5 && middleware_id == middlewareId)
             {
-                SendMsgMiddlewares(message, true);
+                messages_list[messagesIndex].messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
+
+                MMessage largestClockMsg = messages_list[messagesIndex].messages.LastOrDefault();
+
+                InsertReadyMsg(largestClockMsg.message, largestClockMsg.clock);
+                SendMsgMiddlewares(largestClockMsg.message, largestClockMsg.clock, true);
             }
         }
 
+    }
+    private void InsertReadyMsg(string message, long unixTimestampMillis)
+    {
+        ready_messages.Add(new MMessage(message, unixTimestampMillis));
+
+        ready_messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
+
+        string messagesString = String.Join("\n", ready_messages.Select(m => m.message));
+
+        richTextBox_ready.Text = messagesString;
     }
 }
 
