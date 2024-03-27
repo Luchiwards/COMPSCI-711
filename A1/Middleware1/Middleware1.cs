@@ -151,6 +151,20 @@ public class Form1 : Form
             await client.GetStream().WriteAsync(data, 0, data.Length);
         }
     }
+    private async void SendMsgMiddlewares(string message, long unixTimestampMillis, bool confirm)
+    {
+        int[] sortedPorts = new int[4];
+        Array.Copy(middleware_ports, sortedPorts, 4);
+
+        Array.Sort(sortedPorts);
+        for (int i = 0; i < 4; i++)
+        {
+
+            TcpClient client = new TcpClient("localhost", sortedPorts[i]);
+            byte[] data = Encoding.UTF8.GetBytes($"{message},{unixTimestampMillis},{confirm}");
+            await client.GetStream().WriteAsync(data, 0, data.Length);
+        }
+    }
     private async void ReadMsgMiddlewares(TcpClient client)
     {
         byte[] buffer = new byte[1024];
@@ -254,9 +268,15 @@ public class Form1 : Form
 
             }
 
-            if (messages_list[messagesIndex].messages.Count == 5)
+            messagesIndex = messages_list.FindIndex(m => m.id == msgId && m.middlewareId == middlewareId); // Re-find or update index as needed
+
+            if (messagesIndex != -1 && messages_list[messagesIndex].messages.Count == 5)
             {
-                SendMsgMiddlewares(message, true);
+                messages_list[messagesIndex].messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
+
+                MMessage largestClockMsg = messages_list[messagesIndex].messages.LastOrDefault();
+
+                SendMsgMiddlewares(largestClockMsg.message, largestClockMsg.clock, true);
             }
         }
 
