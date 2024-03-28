@@ -32,7 +32,7 @@ public class Form1 : Form
         richTextBox1 = new RichTextBox();
         richTextBox1.Location = new System.Drawing.Point(35, 15);
         richTextBox1.Width = 200;
-        richTextBox1.Height = 100;
+        richTextBox1.Height = 200;
         richTextBox1.Multiline = true;
         richTextBox1.ScrollBars = RichTextBoxScrollBars.Vertical;
 

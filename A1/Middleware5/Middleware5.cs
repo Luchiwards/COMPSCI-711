@@ -229,6 +229,7 @@ public class Form1 : Form
         }
         else
         {
+
             int msgId = Regex.Matches(message, "#(\\d+)")
                                 .Cast<Match>()
                                 .Select(m => int.Parse(m.Groups[1].Value))
@@ -263,13 +264,18 @@ public class Form1 : Form
             }
 
             messagesIndex = messages_list.FindIndex(m => m.id == msgId && m.middlewareId == middlewareId); // Re-find or update index as needed
-            Console.WriteLine($"Messages_list count: {messages_list.Count}");
-            Console.WriteLine($"Message list count: {messages_list[messagesIndex].messages.Count}");
+
             if (messagesIndex != -1 && messages_list[messagesIndex].messages.Count == 5 && middleware_id == middlewareId)
             {
                 messages_list[messagesIndex].messages.Sort((message1, message2) => message1.clock.CompareTo(message2.clock));
 
                 MMessage largestClockMsg = messages_list[messagesIndex].messages.LastOrDefault();
+
+                foreach (MMessage m in messages_list[messagesIndex].messages)
+                {
+                    Console.WriteLine($"Message: {m.message} Clock: {m.clock}");
+
+                }
 
                 InsertReadyMsg(largestClockMsg.message, largestClockMsg.clock);
                 SendMsgMiddlewares(largestClockMsg.message, largestClockMsg.clock, true);
@@ -286,6 +292,8 @@ public class Form1 : Form
         string messagesString = String.Join("\n", ready_messages.Select(m => m.message));
 
         richTextBox_ready.Text = messagesString;
+
+        Console.WriteLine($"Confirm Message: {message} Clock: {unixTimestampMillis}");
     }
 }
 
