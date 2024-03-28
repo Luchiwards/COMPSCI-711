@@ -35,7 +35,7 @@ public class Form1 : Form
     private string title = "Middleware 1";
     private int middleware_id = 1;
     private int middleware_port = 8087;
-    private int[] middleware_ports = {8088, 8089, 8090, 8091 };
+    private int[] middleware_ports = { 8088, 8089, 8090, 8091 };
     private List<MMessages> messages_list = new List<MMessages>();
     private List<MMessage> ready_messages = new List<MMessage>();
 

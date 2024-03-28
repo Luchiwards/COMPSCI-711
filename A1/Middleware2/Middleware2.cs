@@ -223,11 +223,11 @@ public class Form1 : Form
 
     private void InsertMsgToList(string message, long unixTimestampMillis, bool confirm)
     {
-        if(confirm)
+        if (confirm)
         {
             InsertReadyMsg(message, unixTimestampMillis);
         }
-        else 
+        else
         {
             int msgId = Regex.Matches(message, "#(\\d+)")
                                 .Cast<Match>()
