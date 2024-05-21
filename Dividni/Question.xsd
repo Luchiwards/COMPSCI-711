@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+   <xs:simpleType name="TypeType">
+      <xs:restriction base="xs:string">
+         <xs:enumeration value="Unknown"/>
+         <xs:enumeration value="Xyz"/>
+         <xs:enumeration value="Truth"/>
+         <xs:enumeration value="WeakXyz"/>
+         <xs:enumeration value="ShortText"/>
+         <xs:enumeration value="Numerical"/>
+      </xs:restriction>
+   </xs:simpleType>
+   <xs:simpleType name="IdType">
+      <xs:restriction base="xs:string">
+         <xs:pattern value="[A-Za-z_][A-Za-z_0-9]*"/>
+      </xs:restriction>
+   </xs:simpleType>
+   <xs:complexType name="AnswersType">
+      <xs:sequence>
+         <xs:element name="Answer" type="xs:string"
+            minOccurs="1" maxOccurs="unbounded"/>
+      </xs:sequence>
+   </xs:complexType>
+   <xs:complexType name="QuestionType">
+      <xs:sequence>
+         <xs:element name="Stem" type="xs:string"
+            minOccurs="0" maxOccurs="1"/>
+         <xs:element name="TrueAnswers" type="AnswersType"/>
+         <xs:element name="FalseAnswers" type="AnswersType"/>
+      </xs:sequence>
+      <xs:attribute name="type" type="TypeType" use="required"/>
+      <xs:attribute name="id" type="IdType" use="required"/>
+      <xs:attribute name="marks" type="xs:unsignedShort" use="required"/>
+      <xs:attribute name="showMarks" type="xs:boolean" use="optional"/>
+      <xs:attribute name="ansInConstWidthFont" type="xs:boolean" use="optional"/>
+      <xs:attribute name="ansInPreTag" type="xs:boolean" use="optional"/>
+      <xs:attribute name="htmlEncodeAnswers" type="xs:boolean" use="optional"/>
+   </xs:complexType>
+
+   <xs:element name="Question" type="QuestionType"/>
+</xs:schema>

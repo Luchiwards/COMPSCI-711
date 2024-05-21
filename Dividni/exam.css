@@ -1,0 +1,16 @@
+body {
+   font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+}
+
+ol.qlist > li.q {
+   margin: 2em 0;
+}
+
+li > ol.a {
+   list-style: upper-alpha;
+}
+
+.xyz {
+   padding-top: 1em;
+   padding-bottom: 1em;
+}
